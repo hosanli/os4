@@ -19,7 +19,7 @@ main(int memsize)
   ioapicinit();    // another interrupt controller
   consoleinit();   // I/O devices & their interrupts
   uartinit();      // serial port
-cprintf("cpus %p cpu %p\n", cpus, cpu);
+  cprintf("cpus %p cpu %p\n", cpus, cpu);
   cprintf("\ncpu%d: starting xv6\n\n", cpu->id);
   cprintf("mem: %d kb\n", memsize);
   kinit(memsize);         // physical memory allocator
@@ -31,6 +31,7 @@ cprintf("cpus %p cpu %p\n", cpus, cpu);
   ideinit();       // disk
   if(!ismp)
     timerinit();   // uniprocessor timer
+  pageinit();	   // enable paging
   userinit();      // first user process
   bootothers();    // start other processors
 

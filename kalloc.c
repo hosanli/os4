@@ -102,10 +102,17 @@ kalloc(int n)
   acquire(&kmem.lock);
   for(rp=&kmem.freelist; (r=*rp) != 0; rp=&r->next){
     if(r->len >= n){
-      r->len -= n;
-      p = (char*)r + r->len;
-      if(r->len == 0)
+//    r->len -= n;
+//    p = (char*)r + r->len;
+//    now allocating free space starts from the head of free block
+      p = (char* )r;
+      if(r->len == n)
         *rp = r->next;
+	  else {
+		  *rp = (struct run *)(p + n); 
+		  (*rp)->next = r->next;
+		  (*rp)->len = r->len - n;
+	  }
       release(&kmem.lock);
       return p;
     }

@@ -6,6 +6,8 @@ struct pipe;
 struct proc;
 struct spinlock;
 struct stat;
+struct page __attribute__((packed));
+struct page_dir;
 
 // bio.c
 void            binit(void);
@@ -152,6 +154,13 @@ extern struct spinlock tickslock;
 void            uartinit(void);
 void            uartintr(void);
 void            uartputc(int);
+
+// page.c
+void pageinit(void);
+void switch_dir(struct page_dir *);
+struct page *get_page(struct page_dir *, uint, int);
+void *set_page(struct page *, int, int);
+void pageintr(void);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

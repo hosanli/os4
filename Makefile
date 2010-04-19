@@ -9,6 +9,7 @@ OBJS = \
 	kalloc.o\
 	kbd.o\
 	lapic.o\
+	page.o\
 	main.o\
 	mp.o\
 	picirq.o\
