@@ -54,4 +54,8 @@ typedef struct page_dir page_dir_t;
 #define PAGE_L			0x400
 #define OFFSET_L		0x1000
 
+// Some addresses
+#define KSTART_A			0x00100000
+#define APIC_START_A		0xfee00000
+
 #endif

@@ -159,7 +159,7 @@ void            uartputc(int);
 void pageinit(void);
 void switch_dir(struct page_dir *);
 struct page *get_page(struct page_dir *, uint, int);
-void *set_page(struct page *, int, int);
+void *set_page(uint, struct page *, int, int);
 void pageintr(void);
 
 // number of elements in fixed-size array
