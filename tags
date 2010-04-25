@@ -28,13 +28,14 @@ CR0_PE	bootasm.S	/^#define CR0_PE    1  \/\/ protected mode enable bit$/;"	d
 CR0_PE	bootblock.asm	/^#define CR0_PE    1  \/\/ protected mode enable bit$/;"	d
 CR0_PE	bootother.S	/^#define CR0_PE    1  \/\/ protected mode enable bit$/;"	d
 CR0_PE	bootother.asm	/^#define CR0_PE    1  \/\/ protected mode enable bit$/;"	d
-CR0_PG	page.h	45;"	d
-CR0_WP	page.h	46;"	d
+CR0_PG	page.h	49;"	d
+CR0_WP	page.h	50;"	d
+CR4_PAE	page.h	51;"	d
 CRTPORT	console.c	120;"	d	file:
 CTL	kbd.h	10;"	d
 DELIVS	lapic.c	21;"	d	file:
 DIRSIZ	fs.h	45;"	d
-DIR_L	page.h	53;"	d
+DIR_L	page.h	58;"	d
 DPL_USER	mmu.h	55;"	d
 Disassembly	args.asm	/^Disassembly of section .text:$/;"	l
 Disassembly	bootblock.asm	/^Disassembly of section .text:$/;"	l
@@ -141,6 +142,7 @@ KEY_PGUP	kbd.h	26;"	d
 KEY_RT	kbd.h	25;"	d
 KEY_UP	kbd.h	22;"	d
 KSTACKSIZE	param.h	3;"	d
+KSTART_A	page.h	63;"	d
 LEVEL	lapic.c	23;"	d	file:
 LINT0	lapic.c	30;"	d	file:
 LINT1	lapic.c	31;"	d	file:
@@ -158,7 +160,7 @@ NBUF	param.h	7;"	d
 NCPU	param.h	4;"	d
 NDEV	param.h	9;"	d
 NDIRECT	fs.h	18;"	d
-NELEM	defs.h	166;"	d
+NELEM	defs.h	169;"	d
 NFILE	param.h	6;"	d
 NINDIRECT	fs.h	19;"	d
 NINODE	param.h	8;"	d
@@ -167,14 +169,14 @@ NOFILE	param.h	5;"	d
 NPROC	param.h	1;"	d
 NSEGS	proc.h	9;"	d
 NUMLOCK	kbd.h	14;"	d
-OFFSET_L	page.h	55;"	d
+OFFSET_L	page.h	60;"	d
 O_CREATE	fcntl.h	4;"	d
 O_RDONLY	fcntl.h	1;"	d
 O_RDWR	fcntl.h	3;"	d
 O_WRONLY	fcntl.h	2;"	d
 PAGE	param.h	2;"	d
 PAGE_H	page.h	2;"	d
-PAGE_L	page.h	54;"	d
+PAGE_L	page.h	59;"	d
 PCINT	lapic.c	29;"	d	file:
 PERIODIC	lapic.c	28;"	d	file:
 PIPE	sh.c	10;"	d	file:
@@ -294,6 +296,7 @@ T_STACK	traps.h	16;"	d
 T_SYSCALL	traps.h	27;"	d
 T_TSS	traps.h	14;"	d
 UNUSED	proc.h	/^enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };$/;"	e	enum:procstate
+U_BASE	page.h	64;"	d
 VER	lapic.c	12;"	d	file:
 X1	lapic.c	27;"	d	file:
 ZOMBIE	proc.h	/^enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };$/;"	e	enum:procstate
@@ -1310,8 +1313,6 @@ cs	mmu.h	/^  uint cs : 16;         \/\/ code segment selector$/;"	m	struct:gated
 cs	mmu.h	/^  ushort cs;$/;"	m	struct:taskstate
 cs	x86.h	/^  ushort cs;$/;"	m	struct:trapframe
 ctlmap	kbd.h	/^static uchar ctlmap[256] =$/;"	v
-current_dir	kernel.asm	/^	current_dir = kernel_dir;$/;"	d
-current_dir	page.c	/^page_dir_t *current_dir = 0;$/;"	v
 cwd	proc.h	/^  struct inode *cwd;           \/\/ Current directory$/;"	m	struct:proc	typeref:struct:proc::inode
 d	args.asm	/^   d:	57                   	push   %edi$/;"	l
 d	echo.asm	/^   d:	57                   	push   %edi$/;"	l
@@ -1596,6 +1597,9 @@ dinode	fs.h	/^struct dinode {$/;"	s
 dip	kernel.asm	/^    dip = (struct dinode*)bp->data + inum%IPB;$/;"	d
 dip	kernel.asm	/^    dip = (struct dinode*)bp->data + ip->inum%IPB;$/;"	d
 dip	kernel.asm	/^  dip = (struct dinode*)bp->data + ip->inum%IPB;$/;"	d
+dir	kernel.asm	/^	dir = (page_dir_t *)kalloc(sizeof(page_dir_t));	$/;"	d
+dir	proc.h	/^  struct page_dir *dir;		   \/\/ Page directory$/;"	m	struct:cpu	typeref:struct:cpu::page_dir
+dir	proc.h	/^  struct page_dir *dir;	   	   \/\/ Page directory physical address$/;"	m	struct:proc	typeref:struct:proc::page_dir
 dirent	fs.h	/^struct dirent {$/;"	s
 dirfile	usertests.c	/^dirfile(void)$/;"	f
 dirlink	fs.c	/^dirlink(struct inode *dp, char *name, uint inum)$/;"	f
@@ -1927,6 +1931,7 @@ elf	elf.h	/^  uchar elf[12];$/;"	m	struct:elfhdr
 elfhdr	elf.h	/^struct elfhdr {$/;"	s
 empty	kernel.asm	/^      empty = ip;$/;"	d
 empty	kernel.asm	/^  empty = 0;$/;"	d
+enable_page	page.c	/^void enable_page(page_dir_t *dir) $/;"	f
 entry	bootblock.asm	/^  entry = (void(*)(void))(elf->entry & 0xFFFFFF);$/;"	d
 entry	elf.h	/^  uint entry;$/;"	m	struct:elfhdr
 entry	mp.h	/^  ushort entry;                 \/\/ entry count$/;"	m	struct:mpconf
@@ -1953,7 +1958,7 @@ exit	initcode.S	/^exit:$/;"	l
 exit	initcode.asm	/^exit:$/;"	l
 exit	proc.c	/^exit(void)$/;"	f
 exitwait	usertests.c	/^exitwait(void)$/;"	f
-extern	kernel.asm	/^extern char end[];$/;"	l
+extern	kernel.asm	/^extern page_dir_t *kernel_dir;$/;"	l
 extern	kernel.asm	/^extern void forkret(void);$/;"	l
 extern	kernel.asm	/^extern void trapret(void);$/;"	l
 f	args.asm	/^   f:	53                   	push   %ebx$/;"	l
@@ -2296,7 +2301,9 @@ forktest	forktest.c	/^forktest(void)$/;"	f
 forktest	usertests.c	/^forktest(void)$/;"	f
 found	kernel.asm	/^found:$/;"	l
 fourteen	usertests.c	/^fourteen(void)$/;"	f
+frame	page.h	/^	unsigned int frame	 : 20; 	\/\/ Physical address$/;"	m	struct:page
 free	umalloc.c	/^free(void *ap)$/;"	f
+free_pages	page.c	/^void free_pages(page_dir_t *dir, uint vaddr, uint size) $/;"	f
 freeblock	mkfs.c	/^uint freeblock;$/;"	v
 freeinode	mkfs.c	/^uint freeinode = 1;$/;"	v
 freelist	kalloc.c	/^  struct run *freelist;$/;"	m	struct:__anon7	typeref:struct:__anon7::run	file:
@@ -2345,7 +2352,7 @@ gdt	bootother.S	/^gdt:$/;"	l
 gdt	proc.h	/^  struct segdesc gdt[NSEGS];   \/\/ x86 global descriptor table$/;"	m	struct:cpu	typeref:struct:cpu::segdesc
 gdtdesc	bootasm.S	/^gdtdesc:$/;"	l
 gdtdesc	bootother.S	/^gdtdesc:$/;"	l
-get_page	page.c	/^page_t *get_page(page_dir_t *dir, uint vaddress, int new) {$/;"	f
+get_page	page.c	/^page_t *get_page(page_dir_t *dir, uint vaddress) $/;"	f
 getcallerpcs	spinlock.c	/^getcallerpcs(void *v, uint pcs[])$/;"	f
 getcmd	sh.c	/^getcmd(char *buf, int nbuf)$/;"	f
 gets	ulib.c	/^gets(char *buf, int max)$/;"	f
@@ -2420,6 +2427,7 @@ ilock	fs.c	/^ilock(struct inode *ip)$/;"	f
 imcrp	mp.h	/^  uchar imcrp;$/;"	m	struct:mp
 inb	x86.h	/^inb(ushort port)$/;"	f
 init	initcode.S	/^init:$/;"	l
+init_dir	page.c	/^void init_dir(page_dir_t *dir) $/;"	f
 initlock	spinlock.c	/^initlock(struct spinlock *lk, char *name)$/;"	f
 initproc	kernel.asm	/^  initproc = p;$/;"	d
 initproc	proc.c	/^static struct proc *initproc;$/;"	v	typeref:struct:proc	file:
@@ -2489,22 +2497,18 @@ itrunc	fs.c	/^itrunc(struct inode *ip)$/;"	f	file:
 iunlock	fs.c	/^iunlock(struct inode *ip)$/;"	f
 iunlockput	fs.c	/^iunlockput(struct inode *ip)$/;"	f
 iupdate	fs.c	/^iupdate(struct inode *ip)$/;"	f
-kalloc	kalloc.c	/^kalloc(int m)$/;"	f
+kalloc	kalloc.c	/^kalloc(int n)$/;"	f
 kbdgetc	kbd.c	/^kbdgetc(void)$/;"	f
 kbdintr	kbd.c	/^kbdintr(void)$/;"	f
-kend	kernel.asm	/^	kend = ((uint)end + PAGE) & ~(PAGE-1);$/;"	d
-kend	page.c	/^static uint kend; \/\/= ((uint)end + PAGE) & ~(PAGE-1);$/;"	v	file:
 kernel	kernel.asm	/^kernel:     file format elf32-i386$/;"	l
 kernel_dir	kernel.asm	/^	kernel_dir = (page_dir_t *)kalloc(sizeof(page_dir_t));	$/;"	d
-kernel_dir	page.c	/^page_dir_t *kernel_dir = 0;$/;"	v
+kernel_dir	page.h	/^page_dir_t *kernel_dir;$/;"	v
 kfree	kalloc.c	/^kfree(char *v, int len)$/;"	f
 kill	proc.c	/^kill(int pid)$/;"	f
 killed	proc.h	/^  int killed;                  \/\/ If non-zero, have been killed$/;"	m	struct:proc
 kinit	kalloc.c	/^kinit(int len)$/;"	f
 kmem	kalloc.c	/^} kmem;$/;"	v	typeref:struct:__anon7
 ksegment	proc.c	/^ksegment(void)$/;"	f
-ksize	kernel.asm	/^	ksize = kend - 0x00100000;		$/;"	d
-ksize	page.c	/^static uint ksize;\/\/ = kend - 0x00100000;		\/\/ the size of kernel (bytes)$/;"	v	file:
 kstack	proc.h	/^  char *kstack;                \/\/ Bottom of kernel stack for this process$/;"	m	struct:proc
 l	wc.asm	/^  l = w = c = 0;$/;"	d
 lapic	kernel.asm	/^  lapic = (uint*)conf->lapicaddr;$/;"	d
@@ -2515,6 +2519,7 @@ lapicinit	lapic.c	/^lapicinit(int c)$/;"	f
 lapicstartap	lapic.c	/^lapicstartap(uchar apicid, uint addr)$/;"	f
 lapicw	lapic.c	/^lapicw(int index, int value)$/;"	f	file:
 last	kernel.asm	/^      last = s+1;$/;"	d
+lastpage	proc.h	/^  char *lastpage; 			   \/\/ Keep track of the last page$/;"	m	struct:proc
 lcmd	sh.asm	/^    lcmd = (struct listcmd*)cmd;$/;"	d
 ldt	mmu.h	/^  ushort ldt;$/;"	m	struct:taskstate
 left	sh.c	/^  struct cmd *left;$/;"	m	struct:listcmd	typeref:struct:listcmd::cmd	file:
@@ -2628,7 +2633,6 @@ n	hello.asm	/^    n = n*10 + *s++ - '0';$/;"	d
 n	hello.asm	/^  n = 0;$/;"	d
 n	init.asm	/^    n = n*10 + *s++ - '0';$/;"	d
 n	init.asm	/^  n = 0;$/;"	d
-n	kernel.asm	/^	  n = (n + PAGE) & ~(PAGE-1);$/;"	d
 n	kernel.asm	/^    n = MAXFILE*BSIZE - off;$/;"	d
 n	kernel.asm	/^    n = ip->size - off;$/;"	d
 n	kill.asm	/^    n = n*10 + *s++ - '0';$/;"	d
@@ -2694,6 +2698,7 @@ neg	wc.asm	/^    neg = 1;$/;"	d
 neg	wc.asm	/^  neg = 0;$/;"	d
 neg	zombie.asm	/^    neg = 1;$/;"	d
 neg	zombie.asm	/^  neg = 0;$/;"	d
+new_pages	page.c	/^uint new_pages(page_dir_t *dir, uint phyaddr, uint vaddr, uint size,$/;"	f
 newmem	kernel.asm	/^  newmem = kalloc(proc->sz + n);$/;"	d
 next	buf.h	/^  struct buf *next;$/;"	m	struct:buf	typeref:struct:buf::buf
 next	kalloc.c	/^  struct run *next;$/;"	m	struct:run	typeref:struct:run::run	file:
@@ -2780,10 +2785,10 @@ p	grep.asm	/^    p = buf;$/;"	d
 p	grep.asm	/^  p = sbrk(nu * sizeof(Header));$/;"	d
 p	hello.asm	/^  p = sbrk(nu * sizeof(Header));$/;"	d
 p	init.asm	/^  p = sbrk(nu * sizeof(Header));$/;"	d
-p	kernel.asm	/^		p = get_page(kernel_dir, addr_i, 1\/*create a page*\/);$/;"	d
+p	kernel.asm	/^		p = get_page(dir, vaddr);$/;"	d
 p	kernel.asm	/^      p = (char*)r + r->len;$/;"	d
 p	kernel.asm	/^    p = ((bda[0x14]<<8)|bda[0x13])*1024;$/;"	d
-p	kernel.asm	/^  p = (char*)(((uint)end + PAGE) & ~(PAGE-1));$/;"	d
+p	kernel.asm	/^  p = (char *)0x400000;$/;"	d
 p	kernel.asm	/^  p = (struct run*)v;$/;"	d
 p	kernel.asm	/^  p = 0;$/;"	d
 p	kernel.asm	/^  p = allocproc();$/;"	d
@@ -2821,11 +2826,11 @@ padding9	mmu.h	/^  ushort padding9;$/;"	m	struct:taskstate
 page	page.h	/^struct page {$/;"	s
 page_dir	page.h	/^struct page_dir {$/;"	s
 page_dir_t	page.h	/^typedef struct page_dir page_dir_t;$/;"	t	typeref:struct:page_dir
-page_t	kernel.asm	/^page_t *get_page(page_dir_t *dir, uint vaddress, int new) {$/;"	l
+page_t	kernel.asm	/^page_t *get_page(page_dir_t *dir, uint vaddress) $/;"	l
 page_t	page.h	/^typedef struct page page_t; $/;"	t	typeref:struct:page
 page_table	page.h	/^struct page_table {$/;"	s
 page_table_t	page.h	/^typedef struct page_table page_table_t; $/;"	t	typeref:struct:page_table
-pageinit	page.c	/^void pageinit() {$/;"	f
+pageinit	page.c	/^void pageinit() $/;"	f
 pageintr	page.c	/^void pageintr() {$/;"	f
 pages	page.h	/^	page_t pages[1024];$/;"	m	struct:page_table
 pagetables	page.h	/^	page_table_t *pagetables[1024];$/;"	m	struct:page_dir
@@ -2849,7 +2854,6 @@ ph	bootblock.asm	/^  ph = (struct proghdr*)((uchar*)elf + elf->phoff);$/;"	d
 phentsize	elf.h	/^  ushort phentsize;$/;"	m	struct:elfhdr
 phnum	elf.h	/^  ushort phnum;$/;"	m	struct:elfhdr
 phoff	elf.h	/^  uint phoff;$/;"	m	struct:elfhdr
-phyaddr	page.h	/^	unsigned int phyaddr : 20; 	\/\/ Physical address$/;"	m	struct:page
 physaddr	mp.h	/^  void *physaddr;               \/\/ phys addr of MP config table$/;"	m	struct:mp
 picenable	picirq.c	/^picenable(int irq)$/;"	f
 picinit	picirq.c	/^picinit(void)$/;"	f
@@ -2866,6 +2870,7 @@ pid1	usertests.asm	/^  pid1 = fork();$/;"	d
 pid2	usertests.asm	/^  pid2 = fork();$/;"	d
 pid3	usertests.asm	/^  pid3 = fork();$/;"	d
 pinit	proc.c	/^pinit(void)$/;"	f
+pinned	page.h	/^	unsigned int pinned  : 1;	\/\/ Can it be swapped out?$/;"	m	struct:page
 pipe	file.h	/^  struct pipe *pipe;$/;"	m	struct:file	typeref:struct:file::pipe
 pipe	pipe.c	/^struct pipe {$/;"	s	file:
 pipe1	usertests.c	/^pipe1(void)$/;"	f
@@ -3004,7 +3009,7 @@ scheduler	proc.h	/^  struct context *scheduler;   \/\/ Switch here to enter sche
 sector	buf.h	/^  uint sector;$/;"	m	struct:buf
 segdesc	mmu.h	/^struct segdesc {$/;"	s
 seq	usertests.asm	/^  seq = 0;$/;"	d
-set_page	page.c	/^void *set_page(page_t *p, int _r_w, int _u_s) {$/;"	f
+set_page	page.c	/^void set_page(uint phyaddr, page_t *p, int _r_w, int _u_s, int pin) $/;"	f
 sharedfd	usertests.c	/^sharedfd(void)$/;"	f
 shentsize	elf.h	/^  ushort shentsize;$/;"	m	struct:elfhdr
 shiftcode	kbd.h	/^static uchar shiftcode[256] =$/;"	v
@@ -3158,8 +3163,6 @@ static	kernel.asm	/^static struct inode* iget(uint dev, uint inum);$/;"	t
 static	kernel.asm	/^static struct inode*$/;"	t
 static	kernel.asm	/^static struct mp*$/;"	t
 static	kernel.asm	/^static struct proc*$/;"	t
-static	kernel.asm	/^static uint kend; \/\/= ((uint)end + PAGE) & ~(PAGE-1);$/;"	l
-static	kernel.asm	/^static uint ksize;\/\/ = kend - 0x00100000;		\/\/ the size of kernel (bytes)$/;"	l
 static	kernel.asm	/^static uint$/;"	l
 static	kernel.asm	/^static ushort irqmask = 0xFFFF & ~(1<<IRQ_SLAVE);$/;"	l
 static	kernel.asm	/^static void itrunc(struct inode*);$/;"	l
@@ -3217,7 +3220,6 @@ subdir	usertests.c	/^subdir(void)$/;"	f
 sum	kernel.asm	/^  sum = 0;$/;"	d
 sum	mp.c	/^sum(uchar *addr, int len)$/;"	f	file:
 superblock	fs.h	/^struct superblock {$/;"	s
-switch_dir	page.c	/^void switch_dir(page_dir_t *dir) {$/;"	f
 swtch	swtch.S	/^swtch:$/;"	l
 symbols	sh.c	/^char symbols[] = "<|>&;()";$/;"	v
 sys_chdir	sysfile.c	/^sys_chdir(void)$/;"	f
@@ -3298,6 +3300,7 @@ uint	forktest.asm	/^uint$/;"	l
 uint	grep.asm	/^uint$/;"	l
 uint	hello.asm	/^uint$/;"	l
 uint	init.asm	/^uint$/;"	l
+uint	kernel.asm	/^uint new_pages(page_dir_t *dir, uint phyaddr, uint vaddr, uint size,$/;"	l
 uint	kill.asm	/^uint$/;"	l
 uint	ln.asm	/^uint$/;"	l
 uint	ls.asm	/^uint$/;"	l
@@ -3309,7 +3312,8 @@ uint	usertests.asm	/^uint$/;"	l
 uint	wc.asm	/^uint$/;"	l
 uint	zombie.asm	/^uint$/;"	l
 unlinkread	usertests.c	/^unlinkread(void)$/;"	f
-unused	page.h	/^	unsigned int unused  : 7;$/;"	m	struct:page
+unused	page.h	/^	unsigned int unused  : 4;$/;"	m	struct:page
+unused1	page.h	/^	unsigned int unused1 : 2;$/;"	m	struct:page
 usedblocks	mkfs.c	/^uint usedblocks;$/;"	v
 usegment	proc.c	/^usegment(void)$/;"	f
 userinit	proc.c	/^userinit(void)$/;"	f
@@ -3589,10 +3593,12 @@ void	forktest.asm	/^void$/;"	l
 void	grep.asm	/^void$/;"	l
 void	hello.asm	/^void$/;"	l
 void	init.asm	/^void$/;"	l
-void	kernel.asm	/^void *set_page(page_t *p, int _r_w, int _u_s) {$/;"	l
-void	kernel.asm	/^void pageinit() {$/;"	l
+void	kernel.asm	/^void enable_page(page_dir_t *dir) $/;"	l
+void	kernel.asm	/^void free_pages(page_dir_t *dir, uint vaddr, uint size) $/;"	l
+void	kernel.asm	/^void init_dir(page_dir_t *dir) $/;"	l
+void	kernel.asm	/^void pageinit() $/;"	l
 void	kernel.asm	/^void pageintr() {$/;"	l
-void	kernel.asm	/^void switch_dir(page_dir_t *dir) {$/;"	l
+void	kernel.asm	/^void set_page(uint phyaddr, page_t *p, int _r_w, int _u_s, int pin) $/;"	l
 void	kernel.asm	/^void$/;"	l
 void	kill.asm	/^void$/;"	l
 void	ln.asm	/^void$/;"	l

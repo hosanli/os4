@@ -41,6 +41,8 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  struct page_dir *dir;	   	   // Page directory physical address
+  char *lastpage; 			   // Keep track of the last page
 };
 
 // Process memory is laid out contiguously, low addresses first:
@@ -62,6 +64,7 @@ struct cpu {
   // Cpu-local storage variables; see below
   struct cpu *cpu;
   struct proc *proc;
+  struct page_dir *dir;		   // Page directory
 };
 
 extern struct cpu cpus[NCPU];

@@ -5,6 +5,7 @@
 #include "defs.h"
 #include "x86.h"
 #include "elf.h"
+#include "page.h"
 
 int
 exec(char *path, char **argv)
@@ -19,10 +20,13 @@ exec(char *path, char **argv)
   mem = 0;
   sz = 0;
 
+  cprintf("elf header \n");
+//  cprintf("exec %s\n", path);
   if((ip = namei(path)) == 0)
     return -1;
   ilock(ip);
 
+  cprintf("elf header \n");
   // Check ELF header
   if(readi(ip, (char*)&elf, 0, sizeof(elf)) < sizeof(elf))
     goto bad;
@@ -67,13 +71,13 @@ exec(char *path, char **argv)
       goto bad;
     if(ph.type != ELF_PROG_LOAD)
       continue;
-    if(ph.va + ph.memsz < ph.va || ph.va + ph.memsz > sz)
+    if(ph.va + ph.memsz < ph.va || ph.va + ph.memsz > sz + U_BASE)
       goto bad;
     if(ph.memsz < ph.filesz)
       goto bad;
-    if(readi(ip, mem + ph.va, ph.offset, ph.filesz) != ph.filesz)
+    if(readi(ip, mem, ph.offset, ph.filesz) != ph.filesz)
       goto bad;
-    memset(mem + ph.va + ph.filesz, 0, ph.memsz - ph.filesz);
+    memset(mem + ph.filesz, 0, ph.memsz - ph.filesz);
   }
   iunlockput(ip);
   
@@ -87,13 +91,13 @@ exec(char *path, char **argv)
     len = strlen(argv[i]) + 1;
     sp -= len;
     memmove(mem+sp, argv[i], len);
-    *(uint*)(mem+argp + 4*i) = sp;  // argv[i]
+    *(uint*)(mem+argp + 4*i) = sp + U_BASE;  // argv[i]
   }
 
   // Stack frame for main(argc, argv), below arguments.
   sp = argp;
   sp -= 4;
-  *(uint*)(mem+sp) = argp;
+  *(uint*)(mem+sp) = argp + U_BASE;
   sp -= 4;
   *(uint*)(mem+sp) = argc;
   sp -= 4;
@@ -110,8 +114,11 @@ exec(char *path, char **argv)
   proc->mem = mem;
   proc->sz = sz;
   proc->tf->eip = elf.entry;  // main
-  proc->tf->esp = sp;
+  proc->tf->esp = sp + U_BASE;
   usegment();
+  free_pages(proc->dir, (uint)proc->lastpage - proc->sz, proc->sz);
+  proc->lastpage = (char *)new_pages(proc->dir, (uint)mem, (uint)proc->lastpage, 
+		  							 sz, 1, 1, 0);
   return 0;
 
  bad:

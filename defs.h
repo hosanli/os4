@@ -113,7 +113,7 @@ void            wakeup(void*);
 void            yield(void);
 
 // swtch.S
-void            swtch(struct context**, struct context*);
+void            swtch(struct context**, struct context*, void*);
 
 // spinlock.c
 void            acquire(struct spinlock*);
@@ -156,11 +156,14 @@ void            uartintr(void);
 void            uartputc(int);
 
 // page.c
-void pageinit(void);
-void switch_dir(struct page_dir *);
-struct page *get_page(struct page_dir *, uint, int);
-void *set_page(uint, struct page *, int, int);
-void pageintr(void);
+void 			pageinit(void);
+void 			enable_page(struct page_dir*);
+uint 			new_pages(struct page_dir*, uint, uint, uint, int, int, int);
+struct page*	get_page(struct page_dir*, uint);
+void 			set_page(uint phyaddr, struct page*, int, int, int);
+void 			pageintr(void);
+void 			free_pages(struct page_dir*, uint, uint); 
+struct page_dir* init_dir(void);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

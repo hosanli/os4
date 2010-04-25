@@ -4,6 +4,9 @@
 #include "mmu.h"
 #include "proc.h"
 #include "x86.h"
+#include "page.h"
+
+extern page_dir_t *kernel_dir;
 
 static void bootothers(void);
 static void mpmain(void) __attribute__((noreturn));
@@ -80,6 +83,10 @@ bootothers(void)
     // Wait for cpu to get through bootstrap.
     while(c->booted == 0)
       ;
+
+	c->dir = kernel_dir; 
+	enable_page(c->dir);
+    cprintf("cpu%d dir: %x \n", c->id, c->dir);
   }
 }
 

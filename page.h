@@ -18,10 +18,12 @@ struct page {
 	unsigned int present : 1;	
 	unsigned int r_w	 : 1;	// Read/write
 	unsigned int u_s	 : 1;	// User/supervisor
+	unsigned int unused1 : 2;
 	unsigned int accessed: 1;
 	unsigned int dirty	 : 1;
-	unsigned int unused  : 7;
-	unsigned int phyaddr : 20; 	// Physical address
+	unsigned int unused  : 4;
+	unsigned int pinned  : 1;	// Can it be swapped out?
+	unsigned int frame	 : 20; 	// Physical address
 }__attribute__((packed));	 
 
 typedef struct page page_t; 
@@ -41,9 +43,12 @@ struct page_dir {
 
 typedef struct page_dir page_dir_t;
 
+page_dir_t *kernel_dir;
+
 // Control register
 #define CR0_PG 			0x80000000		// Paging Enable 
 #define CR0_WP			0x00010000		// Write protect 
+#define CR4_PAE			0x00000020
 
 // Memory offsets
 //	+---------+---------+----------+
@@ -56,6 +61,6 @@ typedef struct page_dir page_dir_t;
 
 // Some addresses
 #define KSTART_A			0x00100000
-#define APIC_START_A		0xfee00000
+#define U_BASE				0x04000000
 
 #endif

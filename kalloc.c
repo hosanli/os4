@@ -29,16 +29,18 @@ struct {
 void
 kinit(int len)
 {
-  extern char end[];
+//  extern char end[];
   char *p;
   int vlen = len / 4;
 
   initlock(&kmem.lock, "kmem");
   initlock(&vmem_lock, "vmem");
-  p = (char*)(((uint)end + PAGE) & ~(PAGE-1));
+//  p = (char*)(((uint)end + PAGE) & ~(PAGE-1));
+  p = (char *)0x400000;
  
   cprintf(" mem =  %d pages = %d base  %x\n", len, vlen, p);
-  kfree(p, (vlen - 256) * PAGE);
+//  kfree(p, (vlen - 256) * PAGE);
+  kfree(p, (vlen - 1024) * PAGE);
 }
 
 // Free the len bytes of memory pointed at by v,
@@ -102,10 +104,12 @@ kalloc(int n)
   acquire(&kmem.lock);
   for(rp=&kmem.freelist; (r=*rp) != 0; rp=&r->next){
     if(r->len >= n){
-//    r->len -= n;
-//    p = (char*)r + r->len;
+      r->len -= n;
+      p = (char*)r + r->len;
+	  if(r->len == 0)
+		  *rp = r->next;
 //    now allocating free space starts from the head of free block
-      p = (char* )r;
+/*    p = (char* )r;
       if(r->len == n)
         *rp = r->next;
 	  else {
@@ -113,7 +117,7 @@ kalloc(int n)
 		  (*rp)->next = r->next;
 		  (*rp)->len = r->len - n;
 	  }
-      release(&kmem.lock);
+*/    release(&kmem.lock);
       return p;
     }
   }

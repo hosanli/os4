@@ -85,8 +85,8 @@ trap(struct trapframe *tf)
       panic("trap");
     }
     // In user space, assume process misbehaved.
-    cprintf("pid %d %s: trap %d err %d on cpu %d eip %x -- kill proc\n",
-            proc->pid, proc->name, tf->trapno, tf->err, cpu->id, tf->eip);
+    cprintf("pid %d %s: trap %d err %d on cpu %d eip %x esp %x -- kill proc - cpu dir %x \n",
+            proc->pid, proc->name, tf->trapno, tf->err, cpu->id, tf->eip, tf->esp, cpu->dir);
     proc->killed = 1;
   }
 
@@ -94,14 +94,18 @@ trap(struct trapframe *tf)
   // (If it is still executing in the kernel, let it keep running 
   // until it gets to the regular system call return.)
   if(proc && proc->killed && (tf->cs&3) == DPL_USER)
+  { cprintf("here1\n");
     exit();
-
+  }
   // Force process to give up CPU on clock tick.
   // If interrupts were on while locks held, would need to check nlock.
   if(proc && proc->state == RUNNING && tf->trapno == T_IRQ0+IRQ_TIMER)
+  {//cprintf("here2\n");
     yield();
-
+  }
   // Check if the process has been killed since we yielded
   if(proc && proc->killed && (tf->cs&3) == DPL_USER)
+  {cprintf("here3\n");
     exit();
+  }
 }

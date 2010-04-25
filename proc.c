@@ -5,6 +5,8 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "page.h"
+
 
 struct {
   struct spinlock lock;
@@ -61,6 +63,7 @@ procdump(void)
 
 // Set up CPU's kernel segment descriptors.
 // Run once at boot time on each CPU.
+// Kernel goes from 0 to 4 megabyte
 void
 ksegment(void)
 {
@@ -83,8 +86,10 @@ void
 usegment(void)
 {
   pushcli();
-  cpu->gdt[SEG_UCODE] = SEG(STA_X|STA_R, proc->mem, proc->sz-1, DPL_USER);
-  cpu->gdt[SEG_UDATA] = SEG(STA_W, proc->mem, proc->sz-1, DPL_USER);
+//  cpu->gdt[SEG_UCODE] = SEG(STA_X|STA_R, proc->mem, proc->sz-1, DPL_USER);
+//  cpu->gdt[SEG_UDATA] = SEG(STA_W, proc->mem, proc->sz-1, DPL_USER);
+  cpu->gdt[SEG_UCODE] = SEG(STA_X|STA_R, 0, 0xffffffff, DPL_USER);
+  cpu->gdt[SEG_UDATA] = SEG(STA_W, 0, 0xffffffff, DPL_USER);
   cpu->gdt[SEG_TSS] = SEG16(STS_T32A, &cpu->ts, sizeof(cpu->ts)-1, 0);
   cpu->gdt[SEG_TSS].s = 0;
   cpu->ts.ss0 = SEG_KDATA << 3;
@@ -115,10 +120,15 @@ found:
   release(&ptable.lock);
 
   // Allocate kernel stack if necessary.
-  if((p->kstack = kalloc(KSTACKSIZE)) == 0){
+  if((p->kstack = kalloc(KSTACKSIZE)) == 0) {
     p->state = UNUSED;
     return 0;
   }
+
+  p->dir = init_dir();
+  p->lastpage = U_BASE;
+cprintf("---- allocproc create page dir %x for pid %d \n", &p->dir->dirs, p->pid);
+
   sp = p->kstack + KSTACKSIZE;
   
   // Leave room for trap frame.
@@ -153,14 +163,19 @@ userinit(void)
   memset(p->mem, 0, p->sz);
   memmove(p->mem, _binary_initcode_start, (int)_binary_initcode_size);
 
+  // Init page
+  p->lastpage = (char *)new_pages(p->dir, (uint)p->mem, 
+		  						  (uint)p->lastpage, p->sz, 1, 1, 0);
+  cprintf("---- userinit create page table  lastpage %d\n", p->lastpage);
+
   memset(p->tf, 0, sizeof(*p->tf));
   p->tf->cs = (SEG_UCODE << 3) | DPL_USER;
   p->tf->ds = (SEG_UDATA << 3) | DPL_USER;
   p->tf->es = p->tf->ds;
   p->tf->ss = p->tf->ds;
   p->tf->eflags = FL_IF;
-  p->tf->esp = p->sz;
-  p->tf->eip = 0;  // beginning of initcode.S
+  p->tf->esp = p->lastpage;
+  p->tf->eip = U_BASE;  // beginning of initcode.S
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
@@ -181,8 +196,15 @@ growproc(int n)
   memmove(newmem, proc->mem, proc->sz);
   memset(newmem + proc->sz, 0, n);
   kfree(proc->mem, proc->sz);
+  // set the original process pages absence.
+  free_pages(proc->dir, (uint)proc->lastpage - proc->sz, proc->sz);
   proc->mem = newmem;
   proc->sz += n;
+  // map new memory to new pages
+  proc->lastpage = (char *)new_pages(proc->dir, (uint)newmem, (uint)proc->lastpage, 
+		  							 proc->sz, 1, 1, 0);
+  cprintf("modify page table for %s\n", proc->name);
+
   usegment();
   return 0;
 }
@@ -211,6 +233,9 @@ fork(void)
   memmove(np->mem, proc->mem, np->sz);
   np->parent = proc;
   *np->tf = *proc->tf;
+  // create pages for new process
+  np->lastpage = (char *)new_pages(np->dir, (uint)np->mem, (uint)np->lastpage, 
+		  							 np->sz, 1, 1, 0);
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -254,7 +279,9 @@ scheduler(void)
       proc = p;
       usegment();
       p->state = RUNNING;
-      swtch(&cpu->scheduler, proc->context);
+
+//  cprintf("proc id %d %d\n",p->pid, p->state );
+      swtch(&cpu->scheduler, proc->context, &proc->dir->dirs);
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
@@ -282,7 +309,7 @@ sched(void)
     panic("sched interruptible");
 
   intena = cpu->intena;
-  swtch(&proc->context, cpu->scheduler);
+  swtch(&proc->context, cpu->scheduler, &cpu->dir->dirs);
   cpu->intena = intena;
 }
 

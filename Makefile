@@ -33,12 +33,13 @@ OBJS = \
 # Using native tools (e.g., on X86 Linux)
 TOOLPREFIX = 
 
+U_BASE = 0x4000000
 CC = $(TOOLPREFIX)gcc
 AS = $(TOOLPREFIX)gas
 LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
-CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O2 -Wall -MD -ggdb -m32
+CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O2 -Wall -MD -ggdb -m32 -DUSER_BASE=$(U_BASE)
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 ASFLAGS = -m32
 # FreeBSD ld wants ``elf_i386_fbsd''
@@ -65,7 +66,7 @@ bootother: bootother.S
 
 initcode: initcode.S
 	$(CC) $(CFLAGS) -nostdinc -I. -c initcode.S
-	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o initcode.out initcode.o
+	$(LD) $(LDFLAGS) -N -e start -Ttext $(U_BASE) -o initcode.out initcode.o
 	$(OBJCOPY) -S -O binary initcode.out initcode
 	$(OBJDUMP) -S initcode.o > initcode.asm
 
@@ -83,7 +84,7 @@ vectors.S: vectors.pl
 ULIB = ulib.o usys.o printf.o umalloc.o
 
 _%: %.o $(ULIB)
-	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
+	$(LD) $(LDFLAGS) -N -e main -Ttext $(U_BASE) -o $@ $^
 	$(OBJDUMP) -S $@ > $*.asm
 	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
 
