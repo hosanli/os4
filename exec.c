@@ -5,7 +5,6 @@
 #include "defs.h"
 #include "x86.h"
 #include "elf.h"
-#include "page.h"
 
 int
 exec(char *path, char **argv)
@@ -20,13 +19,11 @@ exec(char *path, char **argv)
   mem = 0;
   sz = 0;
 
-  cprintf("elf header \n");
-//  cprintf("exec %s\n", path);
+  cprintf(" -- exec -- %s\n", path);
   if((ip = namei(path)) == 0)
     return -1;
   ilock(ip);
 
-  cprintf("elf header \n");
   // Check ELF header
   if(readi(ip, (char*)&elf, 0, sizeof(elf)) < sizeof(elf))
     goto bad;
@@ -110,15 +107,16 @@ exec(char *path, char **argv)
   safestrcpy(proc->name, last, sizeof(proc->name));
 
   // Commit to the new image.
+//  cprintf("exec commit to new image proc-sz %x\n", proc->sz);
   kfree(proc->mem, proc->sz);
+  //free_pages(proc->dir, U_BASE, proc->sz);
   proc->mem = mem;
   proc->sz = sz;
   proc->tf->eip = elf.entry;  // main
   proc->tf->esp = sp + U_BASE;
+  proc->lastpage = new_pages(proc->dir, (uint)proc->mem,
+		 							 U_BASE, sz, 1, 1, 0);
   usegment();
-  free_pages(proc->dir, (uint)proc->lastpage - proc->sz, proc->sz);
-  proc->lastpage = (char *)new_pages(proc->dir, (uint)mem, (uint)proc->lastpage, 
-		  							 sz, 1, 1, 0);
   return 0;
 
  bad:

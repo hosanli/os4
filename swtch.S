@@ -1,6 +1,6 @@
 # Context switch
 #
-#   void swtch(struct context **old, struct context *new, struct page_dir *dir);
+#   void swtch(struct context **old, struct context *new, void *dir_addr);
 # 
 # Save current register context in old
 # and then load register context from new.
@@ -21,12 +21,13 @@ swtch:
   movl %esp, (%eax)
   movl %edx, %esp
 
-  # Load new page directory
-  movl %ecx, %cr3
-
   # Load new callee-save registers
   popl %edi
   popl %esi
   popl %ebx
   popl %ebp
+
+  # Load new page directory
+  movl %ecx, %cr3
+
   ret

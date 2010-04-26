@@ -52,6 +52,9 @@ mpmain(void)
   ksegment();
   cprintf("cpu%d: mpmain\n", cpu->id);
   idtinit();
+	cpu->dir = kernel_dir; 
+	enable_page(cpu->dir);
+    cprintf("-- mpmain -- cpu%d enable paging dir: %x \n", cpu->id, cpu->dir);
   xchg(&cpu->booted, 1);
 
   cprintf("cpu%d: scheduling\n", cpu->id);
@@ -84,9 +87,6 @@ bootothers(void)
     while(c->booted == 0)
       ;
 
-	c->dir = kernel_dir; 
-	enable_page(c->dir);
-    cprintf("cpu%d dir: %x \n", c->id, c->dir);
   }
 }
 

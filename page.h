@@ -61,6 +61,5 @@ page_dir_t *kernel_dir;
 
 // Some addresses
 #define KSTART_A			0x00100000
-#define U_BASE				0x04000000
 
 #endif

@@ -29,18 +29,18 @@ struct {
 void
 kinit(int len)
 {
-//  extern char end[];
+  extern char end[];
   char *p;
   int vlen = len / 4;
 
   initlock(&kmem.lock, "kmem");
   initlock(&vmem_lock, "vmem");
-//  p = (char*)(((uint)end + PAGE) & ~(PAGE-1));
-  p = (char *)0x400000;
+  p = (char*)(((uint)end + PAGE) & ~(PAGE-1));
+//  p = (char *)0x400000;
  
   cprintf(" mem =  %d pages = %d base  %x\n", len, vlen, p);
 //  kfree(p, (vlen - 256) * PAGE);
-  kfree(p, (vlen - 1024) * PAGE);
+  kfree(p, (vlen - 256) * PAGE);
 }
 
 // Free the len bytes of memory pointed at by v,

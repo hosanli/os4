@@ -78,6 +78,7 @@ sys_write(void)
 
   if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argptr(1, &p, n) < 0)
     return -1;
+//cprintf("sys_write -- p %x n %d \n", p, n);
   return filewrite(f, p, n);
 }
 
@@ -345,12 +346,19 @@ sys_chdir(void)
 int
 sys_exec(void)
 {
+  //cprintf("---- sys_exec ---- \n");
   char *path, *argv[20];
   int i;
   uint uargv, uarg;
 
   if(argstr(0, &path) < 0 || argint(1, (int*)&uargv) < 0)
+  {	
+  //cprintf("---- sys_exec return -1---- \n");
     return -1;
+  }
+
+//  cprintf("---- sys_exec ---- path %s \n", path);
+
   memset(argv, 0, sizeof(argv));
   for(i=0;; i++){
     if(i >= NELEM(argv))

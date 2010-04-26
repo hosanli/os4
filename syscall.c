@@ -16,9 +16,13 @@
 int
 fetchint(struct proc *p, uint addr, int *ip)
 {
-  if(addr >= p->sz || addr+4 > p->sz)
+  if(addr >= p->sz + U_BASE || addr+4 > p->sz + U_BASE)
+  {
+//  cprintf("---- fetchint ---- return -1  addr %x p-sz %d\n", addr, p->sz);
     return -1;
-  *ip = *(int*)(p->mem + addr);
+  }
+  // cprintf("---- fetchint ---- addr %x p-mem %x\n", addr, p->mem);
+  *ip = *(int*)(p->mem + addr - U_BASE);
   return 0;
 }
 
@@ -30,9 +34,10 @@ fetchstr(struct proc *p, uint addr, char **pp)
 {
   char *s, *ep;
 
-  if(addr >= p->sz)
+  if(addr >= p->sz + U_BASE)
     return -1;
-  *pp = p->mem + addr;
+ // cprintf("---- fetchstr ---- addr %x p-mem %x\n", addr, p->mem);
+  *pp = p->mem + addr - U_BASE;
   ep = p->mem + p->sz;
   for(s = *pp; s < ep; s++)
     if(*s == 0)
@@ -57,9 +62,10 @@ argptr(int n, char **pp, int size)
   
   if(argint(n, &i) < 0)
     return -1;
-  if((uint)i >= proc->sz || (uint)i+size >= proc->sz)
+  //cprintf("-- argptr -- i %x\n", i);
+  if((uint)i >= proc->sz + U_BASE || (uint)i+size >= proc->sz + U_BASE)
     return -1;
-  *pp = proc->mem + i;
+  *pp = proc->mem + i - U_BASE;
   return 0;
 }
 
@@ -72,7 +78,11 @@ argstr(int n, char **pp)
 {
   int addr;
   if(argint(n, &addr) < 0)
+  {
+//  cprintf("---- argstr ---- return -1\n");
     return -1;
+  }
+//  cprintf("---- argstr ---- addr %x\n", addr);
   return fetchstr(proc, addr, pp);
 }
 
@@ -126,6 +136,7 @@ syscall(void)
   int num;
   
   num = proc->tf->eax;
+//  cprintf("---- syscall num %d proc %s dir %x----\n", num, proc->name, proc->dir);
   if(num >= 0 && num < NELEM(syscalls) && syscalls[num])
     proc->tf->eax = syscalls[num]();
   else {

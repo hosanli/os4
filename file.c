@@ -108,6 +108,7 @@ fileread(struct file *f, char *addr, int n)
 int
 filewrite(struct file *f, char *addr, int n)
 {
+//	cprintf(" -- filewrite -- f-type %d\n", f->type);
   int r;
 
   if(f->writable == 0)
@@ -119,6 +120,7 @@ filewrite(struct file *f, char *addr, int n)
     if((r = writei(f->ip, addr, f->off, n)) > 0)
       f->off += r;
     iunlock(f->ip);
+//	cprintf(" -- filewrite -- after iunlock \n");
     return r;
   }
   panic("filewrite");

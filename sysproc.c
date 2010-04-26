@@ -48,9 +48,10 @@ sys_sbrk(void)
 
   if(argint(0, &n) < 0)
     return -1;
-  addr = proc->sz;
+  addr = proc->sz + U_BASE;
   if(growproc(n) < 0)
     return -1;
+  cprintf("sys_sbrk -- addr %x n %d\n", addr, n);
   return addr;
 }
 

@@ -126,8 +126,8 @@ found:
   }
 
   p->dir = init_dir();
-  p->lastpage = U_BASE;
-cprintf("---- allocproc create page dir %x for pid %d \n", &p->dir->dirs, p->pid);
+
+  cprintf("---- allocproc create page dir %x for pid %d \n", &p->dir->dirs, p->pid);
 
   sp = p->kstack + KSTACKSIZE;
   
@@ -165,8 +165,7 @@ userinit(void)
 
   // Init page
   p->lastpage = (char *)new_pages(p->dir, (uint)p->mem, 
-		  						  (uint)p->lastpage, p->sz, 1, 1, 0);
-  cprintf("---- userinit create page table  lastpage %d\n", p->lastpage);
+		  						  U_BASE, p->sz, 1, 1, 0);
 
   memset(p->tf, 0, sizeof(*p->tf));
   p->tf->cs = (SEG_UCODE << 3) | DPL_USER;
@@ -174,13 +173,14 @@ userinit(void)
   p->tf->es = p->tf->ds;
   p->tf->ss = p->tf->ds;
   p->tf->eflags = FL_IF;
-  p->tf->esp = p->lastpage;
+  p->tf->esp = U_BASE + p->sz;
   p->tf->eip = U_BASE;  // beginning of initcode.S
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
+  cprintf("---- userinit done-- \n");
 }
 
 // Grow current process's memory by n bytes.
@@ -189,21 +189,20 @@ int
 growproc(int n)
 {
   char *newmem;
-
   newmem = kalloc(proc->sz + n);
   if(newmem == 0)
     return -1;
   memmove(newmem, proc->mem, proc->sz);
   memset(newmem + proc->sz, 0, n);
   kfree(proc->mem, proc->sz);
-  // set the original process pages absence.
-  free_pages(proc->dir, (uint)proc->lastpage - proc->sz, proc->sz);
+//  free_pages(proc->dir, U_BASE, proc->sz);
+//  cprintf("pid %d growproc %x %x %x------\n", proc->pid, newmem, proc->mem, proc->sz);
   proc->mem = newmem;
   proc->sz += n;
-  // map new memory to new pages
-  proc->lastpage = (char *)new_pages(proc->dir, (uint)newmem, (uint)proc->lastpage, 
+  // map new memory to pages
+  cprintf("pid %d growproc size from %x to %x \n", proc->pid, proc->sz-n, proc->sz);
+  proc->lastpage = new_pages(proc->dir, (uint)proc->mem, U_BASE, 
 		  							 proc->sz, 1, 1, 0);
-  cprintf("modify page table for %s\n", proc->name);
 
   usegment();
   return 0;
@@ -226,16 +225,16 @@ fork(void)
   np->sz = proc->sz;
   if((np->mem = kalloc(np->sz)) == 0){
     kfree(np->kstack, KSTACKSIZE);
+	kfree((char*)np->dir, sizeof(page_dir_t));
     np->kstack = 0;
     np->state = UNUSED;
     return -1;
   }
   memmove(np->mem, proc->mem, np->sz);
+  np->lastpage = new_pages(np->dir, np->mem, U_BASE, 
+		  					np->sz, 1, 1, 0);
   np->parent = proc;
   *np->tf = *proc->tf;
-  // create pages for new process
-  np->lastpage = (char *)new_pages(np->dir, (uint)np->mem, (uint)np->lastpage, 
-		  							 np->sz, 1, 1, 0);
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -248,6 +247,7 @@ fork(void)
   pid = np->pid;
   np->state = RUNNABLE;
 
+  cprintf("pid %d -- fork -- pid %d, dir %x, mem %x \n", proc->pid, np->pid,np->dir,np->mem);
   return pid;
 }
 
@@ -280,7 +280,7 @@ scheduler(void)
       usegment();
       p->state = RUNNING;
 
-//  cprintf("proc id %d %d\n",p->pid, p->state );
+//  cprintf("-- scheduler -- switch to pid %d dir %x\n",p->pid, &proc->dir->dirs);
       swtch(&cpu->scheduler, proc->context, &proc->dir->dirs);
 
       // Process is done running for now.
@@ -479,6 +479,7 @@ wait(void)
         pid = p->pid;
         kfree(p->mem, p->sz);
         kfree(p->kstack, KSTACKSIZE);
+		kfree((char *)p->dir, sizeof(page_dir_t));
         p->state = UNUSED;
         p->pid = 0;
         p->parent = 0;

@@ -57,6 +57,7 @@ struct cmd *parsecmd(char*);
 void
 runcmd(struct cmd *cmd)
 {
+	printf(1, "cmd type %d\n",cmd->type); 
   int p[2];
   struct backcmd *bcmd;
   struct execcmd *ecmd;
@@ -166,7 +167,9 @@ main(void)
       continue;
     }
     if(fork1() == 0)
+	{
       runcmd(parsecmd(buf));
+	}
     wait();
   }
   exit();
