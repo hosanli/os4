@@ -42,7 +42,7 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
   struct page_dir *dir;	   	   // Page directory physical address
-  char *lastpage; 			   // Keep track of the last page
+  uint vmem; 			       // Virtual memory address
 };
 
 // Process memory is laid out contiguously, low addresses first:

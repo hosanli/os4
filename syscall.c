@@ -16,13 +16,13 @@
 int
 fetchint(struct proc *p, uint addr, int *ip)
 {
-  if(addr >= p->sz + U_BASE || addr+4 > p->sz + U_BASE)
+  if(addr >= p->sz || addr+4 > p->sz)
   {
 //  cprintf("---- fetchint ---- return -1  addr %x p-sz %d\n", addr, p->sz);
     return -1;
   }
   // cprintf("---- fetchint ---- addr %x p-mem %x\n", addr, p->mem);
-  *ip = *(int*)(p->mem + addr - U_BASE);
+  *ip = *(int*)(p->mem + addr);
   return 0;
 }
 
@@ -34,10 +34,10 @@ fetchstr(struct proc *p, uint addr, char **pp)
 {
   char *s, *ep;
 
-  if(addr >= p->sz + U_BASE)
+  if(addr >= p->sz)
     return -1;
  // cprintf("---- fetchstr ---- addr %x p-mem %x\n", addr, p->mem);
-  *pp = p->mem + addr - U_BASE;
+  *pp = p->mem + addr;
   ep = p->mem + p->sz;
   for(s = *pp; s < ep; s++)
     if(*s == 0)
@@ -63,9 +63,9 @@ argptr(int n, char **pp, int size)
   if(argint(n, &i) < 0)
     return -1;
   //cprintf("-- argptr -- i %x\n", i);
-  if((uint)i >= proc->sz + U_BASE || (uint)i+size >= proc->sz + U_BASE)
+  if((uint)i >= proc->sz || (uint)i+size >= proc->sz)
     return -1;
-  *pp = proc->mem + i - U_BASE;
+  *pp = proc->mem + i;
   return 0;
 }
 

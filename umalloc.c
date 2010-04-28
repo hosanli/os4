@@ -52,7 +52,6 @@ morecore(uint nu)
   if(nu < PAGE)
     nu = PAGE;
   p = sbrk(nu * sizeof(Header));
-printf(1, "p %x\n", p);
   if(p == (char*) -1)
     return 0;
   hp = (Header*)p;

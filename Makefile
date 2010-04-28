@@ -1,5 +1,6 @@
 OBJS = \
 	bio.o\
+	bitmap.o\
 	console.o\
 	exec.o\
 	file.o\
@@ -21,6 +22,7 @@ OBJS = \
 	syscall.o\
 	sysfile.o\
 	sysproc.o\
+	swap.o\
 	timer.o\
 	trapasm.o\
 	trap.o\
@@ -39,16 +41,19 @@ AS = $(TOOLPREFIX)gas
 LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
-CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -O2 -Wall -MD -ggdb -m32 -DU_BASE=$(U_BASE)
+CFLAGS = -fno-pic -static -fno-builtin -fno-strict-aliasing -Wall -MD -ggdb -m32 -DU_BASE=$(U_BASE)
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 ASFLAGS = -m32
 # FreeBSD ld wants ``elf_i386_fbsd''
 LDFLAGS += -m $(shell $(LD) -V | grep elf_i386 2>/dev/null)
 
-xv6.img: bootblock kernel fs.img
+xv6.img: bootblock kernel fs.img swap.img
 	dd if=/dev/zero of=xv6.img count=10000
 	dd if=bootblock of=xv6.img conv=notrunc
 	dd if=kernel of=xv6.img seek=1 conv=notrunc
+
+swap.img: 
+	dd if=/dev/zero of=swap.img count=4096 bs=4096
 
 bootblock: bootasm.S bootmain.c
 	$(CC) $(CFLAGS) -fno-pic -O -nostdinc -I. -c bootmain.c
@@ -66,7 +71,7 @@ bootother: bootother.S
 
 initcode: initcode.S
 	$(CC) $(CFLAGS) -nostdinc -I. -c initcode.S
-	$(LD) $(LDFLAGS) -N -e start -Ttext $(U_BASE) -o initcode.out initcode.o
+	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o initcode.out initcode.o
 	$(OBJCOPY) -S -O binary initcode.out initcode
 	$(OBJDUMP) -S initcode.o > initcode.asm
 
@@ -84,7 +89,7 @@ vectors.S: vectors.pl
 ULIB = ulib.o usys.o printf.o umalloc.o
 
 _%: %.o $(ULIB)
-	$(LD) $(LDFLAGS) -N -e main -Ttext $(U_BASE) -o $@ $^
+	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
 	$(OBJDUMP) -S $@ > $*.asm
 	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
 
@@ -146,18 +151,19 @@ bochs : fs.img xv6.img
 
 # try to generate a unique GDB port
 GDBPORT = $(shell expr `id -u` % 5000 + 25000)
-QEMUOPTS = -smp 2 -hdb fs.img xv6.img
+QEMUOPTS = -smp 2 -hdb fs.img -hdc swap.img xv6.img
 
-qemu: fs.img xv6.img
+qemu: fs.img xv6.img swap.img
 	qemu -parallel mon:stdio $(QEMUOPTS)
 
-qemutty: fs.img xv6.img
+qemutty: fs.img xv6.img swap.img
 	qemu -nographic $(QEMUOPTS)
 
 .gdbinit: .gdbinit.tmpl
 	sed "s/localhost:1234/localhost:$(GDBPORT)/" < $^ > $@
 
-qemu-gdb: fs.img xv6.img .gdbinit
+qemu-gdb: fs.img xv6.img swap.img .gdbinit
 	@echo "*** Now run 'gdb'." 1>&2
-	qemu -parallel mon:stdio $(QEMUOPTS) -s -S -p $(GDBPORT)
+	qemu $(QEEMUOPTS) -S -gdb tcp::$(GDBPORT)
+	#qemu -parallel mon:stdio $(QEMUOPTS) -s -S -p $(GDBPORT)
 

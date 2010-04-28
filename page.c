@@ -10,17 +10,10 @@
 //  user 		0x04000000 - 0xfebfffff  = 64M ~  4076M
 //  apic		0xfec00000 - 0xffffffff  = 4076M ~ 4096M 
 
+// Create identity mapping for kernel.
 void pageinit() 
 {
-	// create a page directory for kernel
-	kernel_dir = (page_dir_t *) kalloc(sizeof(page_dir_t));	
-	memset(kernel_dir, 0, sizeof(page_dir_t));
-
-	// identity map the first 64M size, read-write, supervisor mode, pinned. 
-	new_pages(kernel_dir, 0, 0, 0x4000000, 1, 0, 1);
-
-	// identity map apic, size is 0x3f0, read-write, user mode, pinned.
-	new_pages(kernel_dir, 0xfec00000, 0xfec00000, 0x1400000, 1, 1, 1); 
+	kernel_dir = init_dir();
 }
 
 // Switch page directory address in control register CR3 then 
@@ -45,30 +38,23 @@ void enable_page(page_dir_t *dir)
 uint new_pages(page_dir_t *dir, uint phyaddr, uint vaddr, uint size,
 					int _r_w, int _u_s, int pin) 
 {
-	if ((uint)proc->lastpage > 0xfebfffff)
-		panic("new_nages, out of memory");
 	uint i = 0;
 	page_t *p;
-	while(i < size && (p = get_page(dir, vaddr+i)) != 0) {		// page table exists
+	while(i < size && (p =(page_t*) get_page(dir, vaddr+i)) != 0) {		// page table exists
 		set_page(phyaddr+i, p, _r_w, _u_s, pin);
+	//	cprintf("set_page -- vaddr: %x  phyaddr %x \n",vaddr+i,phyaddr+i);
 		i += PAGE;
-#if 1
-//		cprintf("map phy addr %x to vaddr %x at page %x\n",phyaddr+i, vaddr+i, p);
-//		uint j=0;
-//		while(j++<1)
-//			cprintf("");
-#endif
 	}	
 	
 	if(i < size) {		// page table ran out!
-		uint sig20 = (vaddr+i) / OFFSET_L;	// most significant 20 bits |	Dir	  |	 Page	|	
-		uint index = sig20 / PAGE_L;		// most significant 10 bits |	Dir	  |	 
+		uint sig20 = (vaddr+i) / OFFSET_L;	// |  Dir |	 Page |	
+		uint index = sig20 / PAGE_L;		// |  Dir |	 
 		page_table_t *ptaddr;
 		
 		ptaddr = (page_table_t *) kalloc(sizeof(page_table_t));
 		memset(ptaddr, 0, sizeof(page_table_t));
 
-//		cprintf("---- pid %d create page table %d at %x \n",  proc->pid, index, ptaddr);
+		cprintf("---- pid %d create page table %d at %x \n",  proc->pid, index, ptaddr);
 		
 		dir->pagetables[index] = ptaddr;
 		dir->dirs[index] = ((uint)ptaddr & 0xfffff000) | 0x7;		// set PRESENT, R/W, U/S 
@@ -79,24 +65,23 @@ uint new_pages(page_dir_t *dir, uint phyaddr, uint vaddr, uint size,
 		return (vaddr+i);
 }	
 
-// Get page from page table.
-page_t *get_page(page_dir_t *dir, uint vaddress) 
+// Get page from page table. Return page address if succeed.
+uint get_page(page_dir_t *dir, uint vaddress) 
 {
-	vaddress /= OFFSET_L;				// most significant 20 bits |	Dir	  |	 Page	|	
-	uint index = vaddress / PAGE_L;		// most significant 10 bits |	Dir	  |	 
+	vaddress /= OFFSET_L;				// |  Dir |	Page |	
+	uint index = vaddress / PAGE_L;		// |  Dir |	 
 
-	if(dir->pagetables[index] != 0) {
-		// least significant 10 bits is now the index of page in page table
+	if(dir->pagetables[index]) 
 		return &dir->pagetables[index]->pages[vaddress % PAGE_L]; 
-	}
-	else
-		return 0;
+	else	
+		return 0;	//pagetable has not been created
 }
 
+// Overwrite everything in a page
 void set_page(uint phyaddr, page_t *p, int _r_w, int _u_s, int pin) 
 {
 	if(!p) {
-		panic("set_page");
+		panic("set_page: page is not ready.");
 	}
 	memset(p, 0, sizeof(page_t));
 	p->present = 1;
@@ -104,28 +89,49 @@ void set_page(uint phyaddr, page_t *p, int _r_w, int _u_s, int pin)
 	p->u_s = _u_s;	
 	p->pinned = pin;
 	p->frame = phyaddr / OFFSET_L;
+//	cprintf("set_page --- page: %x  phyaddr %x \n",*p,phyaddr);
 }
 
-// Not really free the physical memory to which the page maps,
-// but set the page absence. 
-void free_pages(page_dir_t *dir, uint vaddr, uint size) 
+
+void vm_free(page_dir_t *dir, uint vaddr, uint size) 
 {	
 	uint i = 0;
-	page_t *p;
+	uint p;
 	while(i < size){
-  cprintf("pid %d free_pages %x %x ------\n", proc->pid, vaddr+i, size);
+	  	cprintf("pid %d vm_free %x ------\n", proc->pid, vaddr+i);
 		p = get_page(dir, vaddr+i);
-		memset(p, 0, sizeof(page_t));
+		if(p > 0){
+			memset((void*)p, 0, sizeof(page_t));
+			i += PAGE;
+		}
+		else
+			panic("vm_free: out of allocated virtual memory");
+	}
+}
+
+uint vm_alloc(page_dir_t *dir, uint size)
+{
+	uint i = U_BASE;
+	uint freep = 0;
+	page_t *p;
+/*	while((freep < size)){
+		if(*(p =(page_t*) get_page(dir, i)) == 0){
+			freep += PAGE;	
+			i += PAGE;
+			continue;
+		}
+		else 
+		freep = 0;
 		i += PAGE;
 	}
-	cprintf("free_pages done\n");
+*/
 }
 
 //	Paging fault handler
 void pageintr() {
 	uint faultaddr;
 	asm volatile("mov %%cr2, %0" : "=r"(faultaddr));
-//	cprintf("cpu%d pid %d page fault at %x proc->dir %x\n", cpu->id, proc->pid, faultaddr, proc->dir);
+	//cprintf("cpu%d pid %d page fault at %x proc->dir %x \n", cpu->id, proc->pid, faultaddr, proc->dir);
 }
 
 page_dir_t *init_dir(void) 

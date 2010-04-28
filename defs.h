@@ -113,7 +113,7 @@ void            wakeup(void*);
 void            yield(void);
 
 // swtch.S
-void            swtch(struct context**, struct context*, void*);
+void            swtch(struct context**, struct context*);
 
 // spinlock.c
 void            acquire(struct spinlock*);
@@ -158,11 +158,12 @@ void            uartputc(int);
 // page.c
 void 			pageinit(void);
 void 			enable_page(struct page_dir*);
-uint 			new_pages(struct page_dir*, uint, uint, uint, int, int, int);
-struct page*	get_page(struct page_dir*, uint);
+uint			vm_alloc(struct page_dir*, uint size);
+void 			vm_free(struct page_dir*, uint vmem, uint size); 
+uint 			new_pages(struct page_dir*, uint mem, uint vmem,uint,  int, int, int);
+uint			get_page(struct page_dir*, uint);
 void 			set_page(uint phyaddr, struct page*, int, int, int);
 void 			pageintr(void);
-void 			free_pages(struct page_dir*, uint, uint); 
 struct page_dir* init_dir(void);
 
 // number of elements in fixed-size array

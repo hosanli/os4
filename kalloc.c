@@ -36,10 +36,8 @@ kinit(int len)
   initlock(&kmem.lock, "kmem");
   initlock(&vmem_lock, "vmem");
   p = (char*)(((uint)end + PAGE) & ~(PAGE-1));
-//  p = (char *)0x400000;
  
   cprintf(" mem =  %d pages = %d base  %x\n", len, vlen, p);
-//  kfree(p, (vlen - 256) * PAGE);
   kfree(p, (vlen - 256) * PAGE);
 }
 
@@ -108,16 +106,7 @@ kalloc(int n)
       p = (char*)r + r->len;
 	  if(r->len == 0)
 		  *rp = r->next;
-//    now allocating free space starts from the head of free block
-/*    p = (char* )r;
-      if(r->len == n)
-        *rp = r->next;
-	  else {
-		  *rp = (struct run *)(p + n); 
-		  (*rp)->next = r->next;
-		  (*rp)->len = r->len - n;
-	  }
-*/    release(&kmem.lock);
+      release(&kmem.lock);
       return p;
     }
   }

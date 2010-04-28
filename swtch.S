@@ -27,7 +27,4 @@ swtch:
   popl %ebx
   popl %ebp
 
-  # Load new page directory
-  movl %ecx, %cr3
-
   ret

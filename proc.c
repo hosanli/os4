@@ -82,14 +82,14 @@ ksegment(void)
 }
 
 // Set up CPU's segment descriptors and current process task state.
+// The base and limit of process' segmemtation has been change to
+// virtual address.
 void
 usegment(void)
 {
   pushcli();
-//  cpu->gdt[SEG_UCODE] = SEG(STA_X|STA_R, proc->mem, proc->sz-1, DPL_USER);
-//  cpu->gdt[SEG_UDATA] = SEG(STA_W, proc->mem, proc->sz-1, DPL_USER);
-  cpu->gdt[SEG_UCODE] = SEG(STA_X|STA_R, 0, 0xffffffff, DPL_USER);
-  cpu->gdt[SEG_UDATA] = SEG(STA_W, 0, 0xffffffff, DPL_USER);
+  cpu->gdt[SEG_UCODE] = SEG(STA_X|STA_R, proc->vmem, 0xfebfffff, DPL_USER);
+  cpu->gdt[SEG_UDATA] = SEG(STA_W, proc->vmem, 0xfebfffff, DPL_USER);
   cpu->gdt[SEG_TSS] = SEG16(STS_T32A, &cpu->ts, sizeof(cpu->ts)-1, 0);
   cpu->gdt[SEG_TSS].s = 0;
   cpu->ts.ss0 = SEG_KDATA << 3;
@@ -125,7 +125,9 @@ found:
     return 0;
   }
 
+  // Initialize virtual memory and page directory
   p->dir = init_dir();
+  p->vmem = U_BASE;
 
   cprintf("---- allocproc create page dir %x for pid %d \n", &p->dir->dirs, p->pid);
 
@@ -163,9 +165,8 @@ userinit(void)
   memset(p->mem, 0, p->sz);
   memmove(p->mem, _binary_initcode_start, (int)_binary_initcode_size);
 
-  // Init page
-  p->lastpage = (char *)new_pages(p->dir, (uint)p->mem, 
-		  						  U_BASE, p->sz, 1, 1, 0);
+  // Init virtual memeory and page
+  new_pages(p->dir, (uint)p->mem, p->vmem, p->sz, 1, 1, 0);
 
   memset(p->tf, 0, sizeof(*p->tf));
   p->tf->cs = (SEG_UCODE << 3) | DPL_USER;
@@ -173,14 +174,13 @@ userinit(void)
   p->tf->es = p->tf->ds;
   p->tf->ss = p->tf->ds;
   p->tf->eflags = FL_IF;
-  p->tf->esp = U_BASE + p->sz;
-  p->tf->eip = U_BASE;  // beginning of initcode.S
+  p->tf->esp = p->sz;
+  p->tf->eip = 0;  // beginning of initcode.S
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
 
   p->state = RUNNABLE;
-  cprintf("---- userinit done-- \n");
 }
 
 // Grow current process's memory by n bytes.
@@ -195,15 +195,13 @@ growproc(int n)
   memmove(newmem, proc->mem, proc->sz);
   memset(newmem + proc->sz, 0, n);
   kfree(proc->mem, proc->sz);
-//  free_pages(proc->dir, U_BASE, proc->sz);
-//  cprintf("pid %d growproc %x %x %x------\n", proc->pid, newmem, proc->mem, proc->sz);
+  vm_free(proc->dir, proc->vmem, proc->sz);
   proc->mem = newmem;
   proc->sz += n;
   // map new memory to pages
   cprintf("pid %d growproc size from %x to %x \n", proc->pid, proc->sz-n, proc->sz);
-  proc->lastpage = new_pages(proc->dir, (uint)proc->mem, U_BASE, 
-		  							 proc->sz, 1, 1, 0);
-
+  new_pages(proc->dir, (uint)proc->mem, proc->vmem, proc->sz, 1, 1, 0);
+  asm volatile("movl %0, %%cr3":: "r"(&proc->dir->dirs));
   usegment();
   return 0;
 }
@@ -231,7 +229,7 @@ fork(void)
     return -1;
   }
   memmove(np->mem, proc->mem, np->sz);
-  np->lastpage = new_pages(np->dir, np->mem, U_BASE, 
+  new_pages(np->dir, np->mem, U_BASE, 
 		  					np->sz, 1, 1, 0);
   np->parent = proc;
   *np->tf = *proc->tf;
@@ -281,7 +279,8 @@ scheduler(void)
       p->state = RUNNING;
 
 //  cprintf("-- scheduler -- switch to pid %d dir %x\n",p->pid, &proc->dir->dirs);
-      swtch(&cpu->scheduler, proc->context, &proc->dir->dirs);
+	  asm volatile("movl %0, %%cr3":: "r"(&proc->dir->dirs));
+      swtch(&cpu->scheduler, proc->context);
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
@@ -309,7 +308,8 @@ sched(void)
     panic("sched interruptible");
 
   intena = cpu->intena;
-  swtch(&proc->context, cpu->scheduler, &cpu->dir->dirs);
+  asm volatile("movl %0, %%cr3":: "r"(&cpu->dir->dirs));
+  swtch(&proc->context, cpu->scheduler);
   cpu->intena = intena;
 }
 

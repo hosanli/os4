@@ -151,3 +151,34 @@ iderw(struct buf *b)
 
   release(&idelock);
 }
+
+//Changes made by Anish 
+//Venk's code for swap ide driver
+
+int readswapblock(int blockid, char *c) {
+       acquire(&idelock);
+       outb(0x172, 1);
+       outb(0x173, blockid & 0xff);
+       outb(0x174, (blockid >> 8) & 0xff);
+       outb(0x175, (blockid >> 16) & 0xff);
+       outb(0x176, ((blockid >> 24) & 0x0f) | 0xE0);
+       outb(0x177, 0x20);
+       while((inb(0x177) & 0xC0) != 0x40);
+       insl(0x170, c, 512/4);
+       release(&idelock);
+}
+
+int writeswapblock(int blockid, char *c) {
+       acquire(&idelock);
+       outb(0x172, 1);
+       outb(0x173, blockid & 0xff);
+       outb(0x174, (blockid >> 8) & 0xff);
+       outb(0x175, (blockid >> 16) & 0xff);
+       outb(0x176, ((blockid >> 24) & 0x0f) | 0xE0);
+       outb(0x177, 0x30);
+       while((inb(0x177) & 0xC0) != 0x40);
+       outsl(0x170, c, 512/4);
+       release(&idelock);
+}
+
+
