@@ -128,7 +128,7 @@ fs.img: mkfs README $(UPROGS)
 clean: 
 	rm -rf *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
 	*.o *.d *.asm *.sym vectors.S parport.out \
-	bootblock kernel xv6.img fs.img swap.img mkfs \
+	bootblock kernel xv6.img fs.img mkfs \
 	initcode initcode.out bootother bootother.out \
 	fmt xv6.pdf xv6.ps \
 	$(UPROGS)
